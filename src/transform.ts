@@ -28,12 +28,13 @@ import {
 import { CSSModulesOptions } from 'vite';
 import { classAttributes, cssModuleImportString } from './constant';
 import { getCssModulesNames } from './postcss';
+import { SenseCssModuleOptions } from './type';
 
 function updateClass(str: string, cssModule: Record<string, string>) {
   return str.split(/\s+/).map(w => {
     if (w) {
       if (cssModule[w]) {
-        cssModule[w]
+        return cssModule[w]
       }
     }
     return w
@@ -106,7 +107,8 @@ export async function resolveCssModuleClassNames(
   code: string,
   id: string,
   target: keyof typeof ScriptTarget,
-  cssModulesOptions: CSSModulesOptions
+  cssModulesOptions: CSSModulesOptions,
+  senseCssModuleOptions?: SenseCssModuleOptions
 ) {
   let cssModuleClassNames: Record<string, string> = {}
   for (const line of code.split('\n')) {
@@ -132,7 +134,7 @@ export async function resolveCssModuleClassNames(
     }
   }
 
-  if (!cssModuleClassNames.length) {
+  if (!Object.keys(cssModuleClassNames).length) {
     return code
   }
 
@@ -144,7 +146,7 @@ export async function resolveCssModuleClassNames(
           const { name, initializer }= node
           // jsx attribute
           // class/className/classList
-          if (name && initializer && classAttributes.test(name.getText())) {
+          if (name && initializer && (senseCssModuleOptions?.classAttributeRegex || classAttributes).test(name.getText())) {
             // 字符串
             if (isStringLiteral(initializer)) {
               return factory.updateJsxAttribute(
@@ -152,11 +154,8 @@ export async function resolveCssModuleClassNames(
                 name,
                 updateExpression(initializer, cssModuleClassNames)
               )
-            } else if (
-              isJsxExpression(initializer) &&
-              initializer.expression &&
-              (isTemplateExpression(initializer.expression) || isObjectLiteralExpression(initializer.expression))
-            ) {
+              // 表达式
+            } else if (isJsxExpression(initializer) && initializer.expression) {
               return factory.updateJsxAttribute(
                 node,
                 name,

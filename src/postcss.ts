@@ -13,7 +13,7 @@ const syntaxMap: Record<string, typeof postLess | typeof postScss> = {
 }
 
 const getSyntax = (id: string) => {
-  return syntaxMap[extname(id)]
+  return syntaxMap[extname(id).slice(1)]
 }
 
 export const getCssModulesNames = async (

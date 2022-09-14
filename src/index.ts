@@ -1,7 +1,8 @@
 import { CSSModulesOptions, Plugin } from 'vite';
 import { ScriptTarget } from 'typescript';
-import { inlineCssModuleFileRE } from './constant';
+import { inlineCssModuleFileRE, jsxPath } from './constant';
 import { resolveCssModuleClassNames } from './transform';
+import { SenseCssModuleOptions } from './type';
 
 type BuildTarget = keyof typeof ScriptTarget
 
@@ -12,7 +13,7 @@ function isTarget(target: any): target is BuildTarget {
   return false
 };
 
-export default (): Plugin =>  {
+export default (option?: SenseCssModuleOptions): Plugin =>  {
   let target: BuildTarget
   let cssModulesOptions: CSSModulesOptions | undefined
 
@@ -20,12 +21,12 @@ export default (): Plugin =>  {
     enforce: 'pre',
     name: 'sense-css-module',
     configResolved(cf) {
-      cssModulesOptions = cf.css?.modules ? cf.css.modules : {}
+      cssModulesOptions = cf.css?.modules ? cf.css.modules : undefined
       target = isTarget(cf.build.target) ? cf.build.target : 'ES2015'
     },
     transform(code, id) {
-      if (cssModulesOptions && id.endsWith('.tsx') && inlineCssModuleFileRE.test(code)) {
-        return resolveCssModuleClassNames(code, id, target, cssModulesOptions)
+      if (cssModulesOptions && jsxPath.test(id) && inlineCssModuleFileRE.test(code)) {
+        return resolveCssModuleClassNames(code, id, target, cssModulesOptions, option)
       }
     },
   }
