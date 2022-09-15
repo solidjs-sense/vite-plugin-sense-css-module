@@ -25,24 +25,36 @@ import {
   isSpreadAssignment,
   SpreadAssignment,
   isIdentifier,
-  Identifier
+  Identifier,
+  NoSubstitutionTemplateLiteral,
+  isNoSubstitutionTemplateLiteral
 } from 'typescript';
 import { CSSModulesOptions } from 'vite';
 import { classAttributes, cssModuleImportString } from './constant';
 import { getCssModulesNames } from './postcss';
 import { SenseCssModuleOptions } from './type';
 
-function updateClass(str: string, cssModule: Record<string, string>) {
+function updateClass(str: string, cssModules: Record<string, string>) {
   return str.split(/\s+/).map(w => {
     if (w) {
-      if (cssModule[w]) {
-        return cssModule[w]
+      if (cssModules[w]) {
+        return cssModules[w]
       }
     }
     return w
   }).join(' ')
 }
 
+type NodeTypes =
+  | PropertyAssignment
+  | TemplateExpression
+  | ConditionalExpression
+  | StringLiteral
+  | Expression
+  | SpreadAssignment
+  | NoSubstitutionTemplateLiteral
+
+function updateExpression (node: NoSubstitutionTemplateLiteral, cssModules: Record<string, string>): NoSubstitutionTemplateLiteral;
 function updateExpression (node: PropertyAssignment, cssModules: Record<string, string>): PropertyAssignment;
 function updateExpression (node: SpreadAssignment, cssModules: Record<string, string>): SpreadAssignment;
 function updateExpression (node: ObjectLiteralExpression, cssModules: Record<string, string>): ObjectLiteralExpression;
@@ -50,11 +62,7 @@ function updateExpression (node: TemplateExpression, cssModules: Record<string, 
 function updateExpression (node: ConditionalExpression, cssModules: Record<string, string>): ConditionalExpression;
 function updateExpression (node: StringLiteral, cssModules: Record<string, string>): StringLiteral;
 function updateExpression (node: Expression, cssModules: Record<string, string>): Expression;
-function updateExpression (
-  node: PropertyAssignment | TemplateExpression | ConditionalExpression | StringLiteral | Expression | SpreadAssignment,
-  cssModules: Record<string,
-  string>
-): Expression | SpreadAssignment | PropertyAssignment | StringLiteral | ConditionalExpression | TemplateExpression {
+function updateExpression (node: NodeTypes, cssModules: Record<string, string>): NodeTypes {
   if (isSpreadAssignment(node)) {
     return factory.updateSpreadAssignment(node, updateExpression(node.expression, cssModules))
   } else if (isPropertyAssignment(node)) {
@@ -78,6 +86,8 @@ function updateExpression (
     }))
   } else if (isStringLiteral(node)) {
     return factory.createStringLiteral(updateClass(node.text, cssModules))
+  } else if (isNoSubstitutionTemplateLiteral(node)) {
+    return factory.createNoSubstitutionTemplateLiteral(updateClass(node.text, cssModules))
   } else if (isTemplateExpression(node)) {
     const headNode = node.head
     return factory.updateTemplateExpression(
