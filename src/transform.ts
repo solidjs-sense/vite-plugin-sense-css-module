@@ -23,7 +23,9 @@ import {
   isPropertyAssignment,
   PropertyAssignment,
   isSpreadAssignment,
-  SpreadAssignment
+  SpreadAssignment,
+  isIdentifier,
+  Identifier
 } from 'typescript';
 import { CSSModulesOptions } from 'vite';
 import { classAttributes, cssModuleImportString } from './constant';
@@ -58,7 +60,11 @@ function updateExpression (
   } else if (isPropertyAssignment(node)) {
     return factory.updatePropertyAssignment(
       node,
-      isStringLiteral(node.name) ? updateExpression(node.name, cssModules) : node.name,
+      isStringLiteral(node.name)
+        ? updateExpression(node.name, cssModules)
+        : isIdentifier(node.name)
+        ? factory.createStringLiteral(updateClass(node.name.text, cssModules))
+        : node.name,
       node.initializer
     )
   } else if (isObjectLiteralExpression(node)) {
