@@ -3,6 +3,8 @@ import { ScriptTarget } from 'typescript';
 import { inlineCssModuleFileRE, jsxPath } from './constant';
 import { resolveCssModuleClassNames } from './transform';
 import { SenseCssModuleOptions } from './type';
+import { readFileSync } from 'fs';
+import generateScopedName from './postcss';
 
 type BuildTarget = keyof typeof ScriptTarget
 
@@ -20,6 +22,24 @@ export default (option?: SenseCssModuleOptions): Plugin =>  {
   return {
     enforce: 'pre',
     name: 'sense-css-module',
+    config(config) {
+      if (config.css?.modules) {
+        const gName = config.css.modules.generateScopedName
+        if ((gName === undefined || gName === null || typeof gName === 'function')) {
+          return {
+            css: {
+              modules: {
+                generateScopedName(name, filename) {
+                  const css = readFileSync(filename, { encoding: 'utf-8' })
+                  return (!gName ? generateScopedName : gName)(name, filename, css)
+                }
+              }
+            }
+          }
+        }
+      }
+      return {}
+    },
     configResolved(cf) {
       cssModulesOptions = cf.css?.modules ? cf.css.modules : undefined
       target = isTarget(cf.build.target) ? cf.build.target : 'ES2015'
