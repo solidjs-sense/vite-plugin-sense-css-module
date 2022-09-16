@@ -30,7 +30,7 @@ export default (option?: SenseCssModuleOptions): Plugin =>  {
             css: {
               modules: {
                 generateScopedName(name, filename) {
-                  const css = readFileSync(filename, { encoding: 'utf-8' })
+                  const css = readFileSync(filename.split('?')[0], { encoding: 'utf-8' })
                   return (!gName ? generateScopedName : gName)(name, filename, css)
                 }
               }
@@ -41,7 +41,7 @@ export default (option?: SenseCssModuleOptions): Plugin =>  {
       return {}
     },
     configResolved(cf) {
-      cssModulesOptions = cf.css?.modules ? cf.css.modules : undefined
+      cssModulesOptions = cf.css?.modules !== false ? cf.css?.modules || {} : undefined
       target = isTarget(cf.build.target) ? cf.build.target : 'ES2015'
     },
     transform(code, id) {
