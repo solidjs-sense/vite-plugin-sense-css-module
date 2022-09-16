@@ -25,7 +25,6 @@ import {
   isSpreadAssignment,
   SpreadAssignment,
   isIdentifier,
-  Identifier,
   NoSubstitutionTemplateLiteral,
   isNoSubstitutionTemplateLiteral
 } from 'typescript';
