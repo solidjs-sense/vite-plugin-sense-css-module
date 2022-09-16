@@ -1,5 +1,5 @@
 import { CSSModulesOptions, Plugin } from 'vite';
-import { ScriptTarget } from 'typescript';
+import { getNameOfDeclaration, ScriptTarget } from 'typescript';
 import { inlineCssModuleFileRE, jsxPath } from './constant';
 import { resolveCssModuleClassNames } from './transform';
 import { SenseCssModuleOptions } from './type';
@@ -27,26 +27,27 @@ export default (option?: SenseCssModuleOptions): Plugin =>  {
       cssFileCache = new Map()
     },
     config(config) {
+      let gName: CSSModulesOptions['generateScopedName']
       if (config.css?.modules) {
-        const gName = config.css.modules.generateScopedName
-        if ((gName === undefined || gName === null || typeof gName === 'function')) {
-          return {
-            css: {
-              modules: {
-                generateScopedName(name, filename) {
-                  const filePath = filename.split('?')[0]
-                  const mtimeMs = statSync(filePath).mtimeMs
-                  const cache = cssFileCache.get(filePath)
-                  let css = cache?.content
-                  if (!css || mtimeMs !== cache?.mtimeMs) {
-                    css = readFileSync(filePath, { encoding: 'utf-8' })
-                    cssFileCache.set(filePath, {
-                      mtimeMs,
-                      content: css
-                    })
-                  }
-                  return (!gName ? generateScopedName : gName)(name, filename, css)
+        gName = config.css.modules.generateScopedName
+      }
+      if ((gName === undefined || gName === null || typeof gName === 'function')) {
+        return {
+          css: {
+            modules: {
+              generateScopedName(name, filename) {
+                const filePath = filename.split('?')[0]
+                const mtimeMs = statSync(filePath).mtimeMs
+                const cache = cssFileCache.get(filePath)
+                let css = cache?.content
+                if (!css || mtimeMs !== cache?.mtimeMs) {
+                  css = readFileSync(filePath, { encoding: 'utf-8' })
+                  cssFileCache.set(filePath, {
+                    mtimeMs,
+                    content: css
+                  })
                 }
+                return (typeof gName === 'function' ? gName : generateScopedName)(name, filename, css)
               }
             }
           }
