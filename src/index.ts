@@ -3,7 +3,7 @@ import { ScriptTarget } from 'typescript';
 import { inlineCssModuleFileRE, jsxPath } from './constant';
 import { resolveCssModuleClassNames } from './transform';
 import { SenseCssModuleOptions } from './type';
-import { readFileSync } from 'fs';
+import { readFileSync, statSync } from 'fs';
 import generateScopedName from './postcss';
 
 type BuildTarget = keyof typeof ScriptTarget
@@ -18,10 +18,14 @@ function isTarget(target: any): target is BuildTarget {
 export default (option?: SenseCssModuleOptions): Plugin =>  {
   let target: BuildTarget
   let cssModulesOptions: CSSModulesOptions | undefined
+  let cssFileCache: Map<string, { mtimeMs: number, content: string}>
 
   return {
     enforce: 'pre',
     name: 'sense-css-module',
+    buildStart() {
+      cssFileCache = new Map()
+    },
     config(config) {
       if (config.css?.modules) {
         const gName = config.css.modules.generateScopedName
@@ -30,7 +34,17 @@ export default (option?: SenseCssModuleOptions): Plugin =>  {
             css: {
               modules: {
                 generateScopedName(name, filename) {
-                  const css = readFileSync(filename.split('?')[0], { encoding: 'utf-8' })
+                  const filePath = filename.split('?')[0]
+                  const mtimeMs = statSync(filePath).mtimeMs
+                  const cache = cssFileCache.get(filePath)
+                  let css = cache?.content
+                  if (!css || mtimeMs !== cache?.mtimeMs) {
+                    css = readFileSync(filePath, { encoding: 'utf-8' })
+                    cssFileCache.set(filePath, {
+                      mtimeMs,
+                      content: css
+                    })
+                  }
                   return (!gName ? generateScopedName : gName)(name, filename, css)
                 }
               }
@@ -45,8 +59,9 @@ export default (option?: SenseCssModuleOptions): Plugin =>  {
       target = isTarget(cf.build.target) ? cf.build.target : 'ES2015'
     },
     transform(code, id) {
-      if (cssModulesOptions && jsxPath.test(id) && inlineCssModuleFileRE.test(code)) {
-        return resolveCssModuleClassNames(code, id, target, cssModulesOptions, option)
+      const filePath = id.split('?')[0]
+      if (cssModulesOptions && jsxPath.test(filePath) && inlineCssModuleFileRE.test(code)) {
+        return resolveCssModuleClassNames(code, filePath, target, cssModulesOptions, option)
       }
     },
   }
