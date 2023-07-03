@@ -2,6 +2,12 @@
 
 Make use css module more sense.
 
+## Editor autocomplete support
+
+- [VS Code](https://github.com/solidjs-sense/vscode-sense-css-module)
+- [(Neo)vim/coc.nvim](https://github.com/solidjs-sense/coc-sense-css-module)
+- [LSP](https://github.com/solidjs-sense/sense-css-module-server)
+
 ## Installation
 
 **npm**
